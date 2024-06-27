@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,6 +12,7 @@ import 'package:flutter_map_example/widgets/first_start_dialog.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -39,14 +41,27 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  static const _startedId = 'AnimatedMapController#MoveStarted';
+  static const _inProgressId = 'AnimatedMapController#MoveInProgress';
+  static const _finishedId = 'AnimatedMapController#MoveFinished';
+  Location _locationController = new Location();
+
+  bool _mapCentered = false;
+  StreamSubscription<LocationData>? _locationSubscription;
+
   List<dynamic>? _data = [];
+  LatLng? _currentP = null;
 
   @override
   void initState() {
     super.initState();
     showIntroDialogIfNeeded();
     _fetchData();
+    Future.delayed(const Duration(seconds: 15), _fetchData);
+    getLocationUpdates().then(
+      (_) => {},
+    );
   }
 
   Future<void> _fetchData() async {
@@ -57,6 +72,100 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    // Create some tweens. These serve to split up the transition from one location to another.
+    // In our case, we want to split the transition be<tween> our current map center and the destination.
+    final camera = mapController.camera;
+    final latTween = Tween<double>(
+        begin: camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(
+        begin: camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: camera.zoom, end: destZoom);
+
+    // Create a animation controller that has a duration and a TickerProvider.
+    final controller = AnimationController(
+        duration: const Duration(milliseconds: 500), vsync: this);
+    // The animation determines what path the animation will take. You can try different Curves values, although I found
+    // fastOutSlowIn to be my favorite.
+    final Animation<double> animation =
+        CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    // Note this method of encoding the target destination is a workaround.
+    // When proper animated movement is supported (see #1263) we should be able
+    // to detect an appropriate animated movement event which contains the
+    // target zoom/center.
+    final startIdWithTarget =
+        '$_startedId#${destLocation.latitude},${destLocation.longitude},$destZoom';
+    bool hasTriggeredMove = false;
+
+    controller.addListener(() {
+      final String id;
+      if (animation.value == 1.0) {
+        id = _finishedId;
+      } else if (!hasTriggeredMove) {
+        id = startIdWithTarget;
+      } else {
+        id = _inProgressId;
+      }
+
+      hasTriggeredMove |= mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+        id: id,
+      );
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        controller.dispose();
+      } else if (status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
+  }
+
+  Future<void> getLocationUpdates() async {
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+
+    _serviceEnabled = await _locationController.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await _locationController.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await _locationController.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await _locationController.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _locationSubscription = _locationController.onLocationChanged
+        .listen((LocationData currentLocation) {
+      if (!_mapCentered &&
+          currentLocation.latitude != null &&
+          currentLocation.longitude != null) {
+        _animatedMapMove(
+            LatLng(currentLocation.latitude!, currentLocation.longitude!), 15);
+        setState(() {
+          _currentP =
+              LatLng(currentLocation.latitude!, currentLocation.longitude!);
+          _mapCentered = true;
+        });
+        _locationSubscription?.cancel();
+        _locationSubscription = null;
+      }
+    });
+  }
+
+  final mapController = MapController();
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
@@ -65,17 +174,21 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           FlutterMap(
+            mapController: mapController,
             options: MapOptions(
               // focus Nha Trang
-              initialCenter: const LatLng(12.2388, 109.1967),
+              initialCenter: _currentP ?? LatLng(12.1888, 109.1467),
               initialZoom: 14,
-              cameraConstraint: CameraConstraint.contain(
-                // focus Nha Trang
-                bounds: LatLngBounds(
-                  const LatLng(12.1888, 109.1467),
-                  const LatLng(12.2888, 109.2467),
-                ),
-              ),
+
+              // cameraConstraint: CameraConstraint.contain(
+              //   // focus Nha Trang
+              //   bounds: _currentP != null
+              //       ? LatLngBounds(_currentP!, _currentP!)
+              //       : LatLngBounds(
+              //           const LatLng(12.1888, 109.1467),
+              //           const LatLng(12.2888, 109.2467),
+              //         ),
+              // ),
             ),
             children: [
               openStreetMapTileLayer,
@@ -99,72 +212,46 @@ class _HomePageState extends State<HomePage> {
               ),
               MarkerLayer(
                 markers: [
-                  Marker(
-                    point: const LatLng(12.242049, 109.187772),
-                    width: 70,
-                    height: 70,
-                    child: Image.asset(
-                      'assets/marker_location.png',
+                  if (_currentP != null)
+                    Marker(
+                      point: LatLng(_currentP!.latitude, _currentP!.longitude),
+                      width: 70,
+                      height: 70,
+                      child: Image.asset(
+                        'assets/marker_location.png',
+                      ),
                     ),
-                  ),
-                  Marker(
-                    point: const LatLng(12.230290, 109.164099),
-                    width: 70,
-                    height: 70,
-                    child: Image.asset(
-                      'assets/marker_location.png',
-                    ),
-                  ),
+                  // Marker(
+                  //   point: const LatLng(12.230290, 109.164099),
+                  //   width: 70,
+                  //   height: 70,
+                  //   child: Image.asset(
+                  //     'assets/marker_location.png',
+                  //   ),
+                  // ),
                   if (_data != null)
                     ..._data!.map((item) {
-                      MaterialColor calculateIconColor(int status) {
-                        switch (status) {
-                          case 2:
-                            return Colors.green;
-                          case 3:
-                            return Colors.yellow;
-                          case 4:
-                            return Colors.red;
-                          default:
-                            return Colors.grey;
-                        }
-                      }
-
-                      String assetTypeCar(int type) {
-                        switch (type) {
-                          case 0:
-                            return 'assets/type_car/vf.png';
-                          case 1:
-                            return 'assets/type_car/testla_model_s.png';
-                          case 2:
-                            return 'assets/type_car/kia_soul_ev.png';
-                          case 3:
-                            return 'assets/type_car/mg_zs_ev.png';
-                          case 4:
-                            return 'assets/type_car/volkswagen_id3.png';
-                          case 4:
-                            return 'assets/type_car/hyundai_kona_electric.png';
-                          case 4:
-                            return 'assets/type_car/honda_e.png';
-                          case 4:
-                            return 'assets/type_car/nissan_leaf.png';
-                          case 4:
-                            return 'assets/type_car/peugeot_e208.png';
-                          case 4:
-                            return 'assets/type_car/polestar_2.png';
-                          default:
-                            return 'assets/type_car/tesla_model_3.png';
-                        }
-                      }
-
                       final double latitude = item['latitude'] is double
                           ? item['latitude'] as double
                           : 0.0;
                       final double longitude = item['longitude'] is double
                           ? item['longitude'] as double
                           : 0.0;
-                      final String customerName = (item['customer_name'] != null) ? item['customer_name'] as String : 'No Name';
-                      final int unitPrice = (item['unit_price'] != null) ? item['unit_price'] as int : 0;
+                      final String customerName =
+                          (item['customer_name'] != null)
+                              ? item['customer_name'] as String
+                              : 'Xe Đang Trống';
+                      final int unitPrice = (item['unit_price'] != null)
+                          ? item['unit_price'] as int
+                          : 0;
+                      final int time = (item['rental_duration'] != null)
+                          ? item['rental_duration'] as int
+                          : 0;
+
+                      final int status = item['status'] as int;
+                      final int batteryStatus = (item['battery_status'] != null)
+                          ? item['battery_status'] as int
+                          : 0;
                       return Marker(
                           point: LatLng(latitude, longitude),
                           width: 40,
@@ -175,33 +262,184 @@ class _HomePageState extends State<HomePage> {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return Container(
-                                    height: 400,
+                                    height: 600,
                                     width: screenWidth,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 10, horizontal: 30),
                                     child: Column(
                                       children: [
-                                        Text(
-                                          customerName,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 26),
+                                        Expanded(
+                                          child: ListView(
+                                            children: [
+                                              Container(
+                                                height: 200,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          20.0),
+                                                  image: DecorationImage(
+                                                    image: AssetImage(
+                                                        assetTypeCar(
+                                                            item['vehicle_type']
+                                                                as int)),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    const SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        'Status:',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      generateTextStatus(
+                                                          status),
+                                                      style: TextStyle(
+                                                          fontSize: 24,
+                                                          color:
+                                                              calculateIconColor(
+                                                                  status)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    const SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        'Tên KH:',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      customerName,
+                                                      style: const TextStyle(
+                                                          fontSize: 24),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    const SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        'Pin:',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '$batteryStatus%',
+                                                      style: TextStyle(
+                                                          fontSize: 24,
+                                                          color:
+                                                              generateClassStatusBattery(
+                                                                  batteryStatus)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    const SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        'Giá thuê:',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '\$$unitPrice',
+                                                      style: const TextStyle(
+                                                          fontSize: 24),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    const SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        'Thời gian:',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '$time/h',
+                                                      style: const TextStyle(
+                                                          fontSize: 24),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        Image.asset(
-                                            assetTypeCar(
-                                                item['vehicle_type'] as int),
-                                            height: 200),
-                                        Text(
-                                          'Pin: ${item['battery_status']}%',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 20),
-                                        ),
-                                        Text(
-                                          'Unit Price: $unitPrice',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 20),
+                                        InkWell(
+                                          onTap: () {},
+                                          child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 15),
+                                              width: MediaQuery.of(context)
+                                                  .size
+                                                  .width,
+                                              decoration: BoxDecoration(
+                                                  color: status != 1
+                                                      ? Colors.grey
+                                                      : const Color(0xFF283FB1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30)),
+                                              child: const Center(
+                                                  child: Text(
+                                                'Đặt xe',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 20),
+                                              ))),
                                         ),
                                       ],
                                     ),
@@ -214,7 +452,7 @@ class _HomePageState extends State<HomePage> {
                                 SvgPicture.asset(
                                   'assets/ic_car.svg',
                                   colorFilter: ColorFilter.mode(
-                                      calculateIconColor(item['status'] as int),
+                                      generateClassStatusBattery(batteryStatus),
                                       BlendMode.srcIn),
                                 ),
                                 Visibility(
@@ -240,6 +478,73 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  MaterialColor calculateIconColor(int status) {
+    switch (status) {
+      case 1:
+        return Colors.green;
+      case 2:
+        return Colors.blue;
+      case 3:
+        return Colors.amber;
+      case 4:
+        return Colors.red;
+      default:
+        return Colors.green;
+    }
+  }
+
+  String generateTextStatus(int status) {
+    switch (status) {
+      case 1:
+        return 'Free';
+      case 2:
+        return 'Đã có khách';
+      case 3:
+        return 'Hết pin';
+      case 4:
+        return 'Hỏng';
+      default:
+        return 'Free';
+    }
+  }
+
+  String assetTypeCar(int type) {
+    switch (type) {
+      case 0:
+        return 'assets/type_car/vf.png';
+      case 1:
+        return 'assets/type_car/testla_model_s.png';
+      case 2:
+        return 'assets/type_car/kia_soul_ev.png';
+      case 3:
+        return 'assets/type_car/mg_zs_ev.png';
+      case 4:
+        return 'assets/type_car/volkswagen_id3.png';
+      case 4:
+        return 'assets/type_car/hyundai_kona_electric.png';
+      case 4:
+        return 'assets/type_car/honda_e.png';
+      case 4:
+        return 'assets/type_car/nissan_leaf.png';
+      case 4:
+        return 'assets/type_car/peugeot_e208.png';
+      case 4:
+        return 'assets/type_car/polestar_2.png';
+      default:
+        return 'assets/type_car/tesla_model_3.png';
+    }
+  }
+
+  Color generateClassStatusBattery(int status) {
+    if (status >= 80) {
+      return Colors.green;
+    } else if (status > 20) {
+      return Colors.blue;
+    } else {
+      return Colors.red;
+    }
   }
 
   void showIntroDialogIfNeeded() {

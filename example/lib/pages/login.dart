@@ -35,8 +35,8 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'user@gmail.com');
-  final _passwordController = TextEditingController(text: 'user@password');
+  final _emailController = TextEditingController(text: 'staff@gmail.com');
+  final _passwordController = TextEditingController(text: 'staff@password');
 
   bool isLoading = false;
 
@@ -68,7 +68,7 @@ class _LoginState extends State<Login> {
               height: 30,
             ),
             const Text(
-              'Login',
+              'Staff Login',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
             ),
             const Padding(

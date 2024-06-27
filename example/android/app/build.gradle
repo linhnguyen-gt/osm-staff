@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "dev.fleaflet.flutter_map.example"
+        applicationId "dev.fleaflet.flutter_map.staff"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()

@@ -21,6 +21,7 @@ dependencies:
   url_launcher: ^6.3.0
   url_strategy: ^0.2.0
   vector_math: ^2.1.4
+  location: ^6.0.2
 
 dependency_overrides:
   flutter_map:
