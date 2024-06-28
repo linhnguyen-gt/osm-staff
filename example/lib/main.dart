@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map_example/pages/animated_map_controller.dart';
+import 'package:flutter_map_example/pages/begin.dart';
 import 'package:flutter_map_example/pages/bundled_offline_map.dart';
 import 'package:flutter_map_example/pages/cancellable_tile_provider.dart';
 import 'package:flutter_map_example/pages/circle.dart';
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
       home: const Login(),
       routes: <String, WidgetBuilder>{
         HomePage.route: (context) => const HomePage(),
+        BeginPage.route: (context) => const BeginPage(),
         ProfileScreen.route: (context) => const ProfileScreen(),
         CancellableTileProviderPage.route: (context) =>
             const CancellableTileProviderPage(),
