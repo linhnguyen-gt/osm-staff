@@ -32,6 +32,20 @@ Future<List<dynamic>> fetchData(String token) async {
   }
 }
 
+Future<List<dynamic>> fetchDataPoint(String token) async {
+  final url = Uri.parse('http://pinkapp.lol/api/v1/point/list');
+  final headers = {'Authorization': 'Bearer $token'};
+
+  final response = await http.get(url, headers: headers);
+  if (response.statusCode == 200) {
+    final jsonData = json.decode(response.body);
+    final metadata = jsonData['metadata'] as List<dynamic>;
+    return metadata;
+  } else {
+    return [];
+  }
+}
+
 class HomePage extends StatefulWidget {
   static const String route = '/home';
 
@@ -51,6 +65,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   StreamSubscription<LocationData>? _locationSubscription;
 
   List<dynamic>? _data = [];
+  List<dynamic>? _dataPoint = [];
+
   LatLng? _currentP = null;
 
   @override
@@ -58,6 +74,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.initState();
     showIntroDialogIfNeeded();
     _fetchData();
+    _fetchDataPoint();
     Future.delayed(const Duration(seconds: 15), _fetchData);
     getLocationUpdates().then(
       (_) => {},
@@ -69,6 +86,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final data = await fetchData(token);
     setState(() {
       _data = data;
+    });
+  }
+
+  Future<void> _fetchDataPoint() async {
+    final token = MyLogin.instance.token;
+    final dataPoint = await fetchDataPoint(token);
+    setState(() {
+      _dataPoint = dataPoint;
     });
   }
 
@@ -177,8 +202,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             mapController: mapController,
             options: MapOptions(
               // focus Nha Trang
-              initialCenter: _currentP ?? LatLng(12.1888, 109.1467),
-              initialZoom: 14,
+              initialCenter: _currentP ?? const LatLng(12.1888, 109.1467),
+              initialZoom: _currentP != null ? 14 : 12,
 
               // cameraConstraint: CameraConstraint.contain(
               //   // focus Nha Trang
@@ -221,14 +246,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         'assets/marker_location.png',
                       ),
                     ),
-                  // Marker(
-                  //   point: const LatLng(12.230290, 109.164099),
-                  //   width: 70,
-                  //   height: 70,
-                  //   child: Image.asset(
-                  //     'assets/marker_location.png',
-                  //   ),
-                  // ),
+                  if (_dataPoint != null)
+                    ..._dataPoint!.map((item) {
+                      final double latitude = item['latitude'] is double
+                          ? item['latitude'] as double
+                          : 0.0;
+                      final double longitude = item['longitude'] is double
+                          ? item['longitude'] as double
+                          : 0.0;
+
+                      return Marker(
+                          point: LatLng(latitude, longitude),
+                          child: InkWell(
+                            onTap: () {},
+                            child: SvgPicture.asset(
+                              'assets/ic_energy.svg',
+                              colorFilter: const ColorFilter.mode(
+                                  Colors.orange, BlendMode.srcIn),
+                            ),
+                          ));
+                    }),
                   if (_data != null)
                     ..._data!.map((item) {
                       final double latitude = item['latitude'] is double
@@ -262,7 +299,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return Container(
-                                    height: 600,
+                                    height: 700,
                                     width: screenWidth,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 10, horizontal: 30),
@@ -278,12 +315,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                                       BorderRadius.circular(
                                                           20.0),
                                                   image: DecorationImage(
-                                                    image: AssetImage(
-                                                        assetTypeCar(
+                                                    image: AssetImage(assetTypeCar(
                                                             item['vehicle_type']
-                                                                as int)),
+                                                                as int)['icon']
+                                                        as String),
                                                     fit: BoxFit.cover,
                                                   ),
+                                                ),
+                                              ),
+                                              Text(
+                                                assetTypeCar(
+                                                        item['vehicle_type']
+                                                            as int)['name']
+                                                    as String,
+                                                style: const TextStyle(
+                                                  fontSize: 20,
                                                 ),
                                               ),
                                               Padding(
@@ -417,7 +463,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           ),
                                         ),
                                         InkWell(
-                                          onTap: () {},
+                                          onTap: () {
+                                            Navigator.of(context).pop();
+                                            showBookCarDialog(context);
+                                          },
                                           child: Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -510,30 +559,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  String assetTypeCar(int type) {
+  Map<String, dynamic> assetTypeCar(int type) {
     switch (type) {
       case 0:
-        return 'assets/type_car/vf.png';
+        return {'icon': 'assets/type_car/vf.png', 'name': 'Vinfast VF e34'};
       case 1:
-        return 'assets/type_car/testla_model_s.png';
+        return {
+          'icon': 'assets/type_car/testla_model_s.png',
+          'name': 'Tesla Model S'
+        };
       case 2:
-        return 'assets/type_car/kia_soul_ev.png';
+        return {
+          'icon': 'assets/type_car/kia_soul_ev.png',
+          'name': 'Kia Soul EV'
+        };
       case 3:
-        return 'assets/type_car/mg_zs_ev.png';
+        return {'icon': 'assets/type_car/mg_zs_ev.png', 'name': 'MG ZS EV'};
       case 4:
-        return 'assets/type_car/volkswagen_id3.png';
-      case 4:
-        return 'assets/type_car/hyundai_kona_electric.png';
-      case 4:
-        return 'assets/type_car/honda_e.png';
-      case 4:
-        return 'assets/type_car/nissan_leaf.png';
-      case 4:
-        return 'assets/type_car/peugeot_e208.png';
-      case 4:
-        return 'assets/type_car/polestar_2.png';
+        return {
+          'icon': 'assets/type_car/volkswagen_id3.png',
+          'name': 'Volkswagen ID.3'
+        };
+      case 5:
+        return {
+          'icon': 'assets/type_car/hyundai_kona_electric.png',
+          'name': 'Hyundai Kona Electric'
+        };
+      case 6:
+        return {'icon': 'assets/type_car/honda_e.png', 'name': 'Honda E'};
+
+      case 7:
+        return {
+          'icon': 'assets/type_car/nissan_leaf.png',
+          'name': 'Nissan Leaf'
+        };
+      case 8:
+        return {
+          'icon': 'assets/type_car/peugeot_e208.png',
+          'name': 'Peugeot E-208'
+        };
+      case 9:
+        return {'icon': 'assets/type_car/polestar_2.png', 'name': 'Polestar 2'};
       default:
-        return 'assets/type_car/tesla_model_3.png';
+        return {
+          'icon': 'assets/type_car/tesla_model_3.png',
+          'name': 'Tesla Model 3'
+        };
     }
   }
 
@@ -565,5 +636,55 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         },
       );
     }
+  }
+
+  Future<void> showBookCarDialog(BuildContext context) async {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'ĐẶT XE THÀNH CÔNG',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 26, fontWeight: FontWeight.bold, color: Colors.green),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: SvgPicture.asset(
+                  'assets/ic_success.svg',
+                  width: 100,
+                  height: 100,
+                  colorFilter:
+                      const ColorFilter.mode(Colors.green, BlendMode.srcIn),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 0, 167, 111),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  minimumSize: Size(screenWidth, 50),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text(
+                  'Xác nhận',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
