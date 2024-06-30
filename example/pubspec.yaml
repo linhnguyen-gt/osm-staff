@@ -102,4 +102,11 @@ flutter:
     - assets/mapbox-logo-white.png
     - assets/google_icon.png
     - assets/apple_icon.png
+    - assets/background_profile.png
+    - assets/ic_lock.png
+    - assets/ic_glo.png
+    - assets/ic_noti.png
+    - assets/ic_help.png
+    - assets/ic_security.png
+    - assets/ic_team.png
     - assets/
