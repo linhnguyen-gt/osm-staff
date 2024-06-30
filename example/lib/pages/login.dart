@@ -7,7 +7,7 @@ import '../plugins/my_login.dart';
 import 'begin.dart';
 
 Future<dynamic> login({required String email, required String password}) async {
-  final url = Uri.parse('http://pinkapp.lol/api/v1/auth/login');
+  final url = Uri.parse('http://103.82.195.138:3105/api/v1/auth/login');
 
   final requestBody = json.encode({'email': email, 'password': password});
 
@@ -23,8 +23,10 @@ Future<dynamic> login({required String email, required String password}) async {
   }
 }
 
+final title = ['Sign Up', 'Sign In'];
+
 class Login extends StatefulWidget {
-  static const String route = '/';
+  static const String route = '/login';
 
   const Login({super.key});
 
@@ -59,6 +61,7 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFDFDFE),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -67,14 +70,40 @@ class _LoginState extends State<Login> {
               height: 30,
             ),
             const Text(
-              'Staff Login',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+              'Shipping and Track Anytime',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             const Padding(
               padding: EdgeInsets.only(top: 20),
               child: Text(
-                'Hello Welcome Back',
-                style: TextStyle(fontSize: 26),
+                'Get great experience with track',
+                style: TextStyle(color: Color(0xFFA7A9B7)),
+              ),
+            ),
+            const SizedBox(
+              height: 30,
+            ),
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: const Color(0xFFF8F9F8),
+              ),
+              child: Row(
+                children: title.map((item) {
+                  final index = title.indexOf(item);
+                  return Expanded(
+                      child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    decoration: BoxDecoration(
+                        color: index == 1 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(30)),
+                    child: Text(
+                      item,
+                      textAlign: TextAlign.center,
+                    ),
+                  ));
+                }).toList(),
               ),
             ),
             const SizedBox(
@@ -86,21 +115,28 @@ class _LoginState extends State<Login> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.only(bottom: 20),
-                    child: Text('Email'),
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'Email',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                    ),
                   ),
                   TextFormField(
                     enabled: !isLoading,
                     controller: _emailController,
                     decoration: InputDecoration(
                       enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                       border: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                       focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                     ),
                     validator: (value) {
@@ -117,21 +153,28 @@ class _LoginState extends State<Login> {
                     height: 30,
                   ),
                   const Padding(
-                    padding: EdgeInsets.only(bottom: 20),
-                    child: Text('password'),
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'Password',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                    ),
                   ),
                   TextFormField(
                     enabled: !isLoading,
                     controller: _passwordController,
                     decoration: InputDecoration(
                       enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                       border: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                       focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFF3F3F3)),
                           borderRadius: BorderRadius.circular(20)),
                     ),
                     obscureText: true,
@@ -155,7 +198,7 @@ class _LoginState extends State<Login> {
                         padding: const EdgeInsets.symmetric(vertical: 20.0),
                         width: MediaQuery.of(context).size.width,
                         decoration: BoxDecoration(
-                            color: const Color(0xFF283FB1),
+                            color: const Color(0xFFFD683D),
                             borderRadius: BorderRadius.circular(30)),
                         child: Center(
                             child: isLoading
@@ -167,12 +210,72 @@ class _LoginState extends State<Login> {
                                     ),
                                   )
                                 : const Text(
-                                    'Login',
+                                    'Sign In',
                                     style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20),
+                                        color: Colors.white, fontSize: 20),
                                   ))),
+                  ),
+                  const SizedBox(
+                    height: 50,
+                  ),
+                  const Divider(),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.0),
+                    child: Center(
+                      child: Text(
+                        'Or Sign In With',
+                        style: TextStyle(color: Color(0xFFA7A9B7)),
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20.0),
+                        width: MediaQuery.of(context).size.width,
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30)),
+                        child: Center(
+                            child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset('assets/google_icon.png'),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            const Text(
+                              'Sign Up with Google',
+                              style:
+                                  TextStyle(color: Colors.black, fontSize: 20),
+                            ),
+                          ],
+                        ))),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  InkWell(
+                    child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20.0),
+                        width: MediaQuery.of(context).size.width,
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFFD683D),
+                            borderRadius: BorderRadius.circular(30)),
+                        child: Center(
+                            child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset('assets/apple_icon.png'),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            const Text(
+                              'Sign Up with Apple',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 20),
+                            ),
+                          ],
+                        ))),
                   ),
                 ],
               ),
