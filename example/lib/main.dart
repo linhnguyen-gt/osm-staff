@@ -6,6 +6,7 @@ import 'package:flutter_map_example/pages/cancellable_tile_provider.dart';
 import 'package:flutter_map_example/pages/circle.dart';
 import 'package:flutter_map_example/pages/custom_crs/custom_crs.dart';
 import 'package:flutter_map_example/pages/debouncing_tile_update_transformer.dart';
+import 'package:flutter_map_example/pages/edit_profile.dart';
 import 'package:flutter_map_example/pages/epsg3413_crs.dart';
 import 'package:flutter_map_example/pages/epsg4326_crs.dart';
 import 'package:flutter_map_example/pages/fallback_url_page.dart';
@@ -55,6 +56,7 @@ class MyApp extends StatelessWidget {
       ),
       home: const SplashScreen(),
       routes: <String, WidgetBuilder>{
+        EditProfile.route: (context) => const EditProfile(),
         Login.route: (context) => const Login(),
         HomePage.route: (context) => const HomePage(),
         BeginPage.route: (context) => const BeginPage(),
