@@ -82,5 +82,31 @@ flutter:
     - assets/type_car/polestar_2.png
     - assets/type_car/tesla_model_3.png
     - assets/type_car/volkswagen_id3.png
+    - assets/bottom_navigator/ic_home.svg
+    - assets/bottom_navigator/ic_list_order.svg
+    - assets/bottom_navigator/ic_profile.svg
+    - assets/bottom_navigator/ic_message.svg
+    - assets/bottom_navigator/ic_map.svg
+    - assets/home/bg_home.png
+    - assets/home/ic_notice.svg
+    - assets/home/ic_add.svg
+    - assets/home/ic_search.svg
+    - assets/home/ic_scan.svg
+    - assets/home/ic_check_rate.svg
+    - assets/home/ic_nearby_drop.svg
+    - assets/home/ic_others.svg
+    - assets/home/ic_help.svg
+    - assets/home/ic_wallet.svg
+    - assets/home/ic_order.svg
+    - assets/home/ic_package.svg
     - assets/mapbox-logo-white.png
+    - assets/google_icon.png
+    - assets/apple_icon.png
+    - assets/background_profile.png
+    - assets/ic_lock.png
+    - assets/ic_glo.png
+    - assets/ic_noti.png
+    - assets/ic_help.png
+    - assets/ic_security.png
+    - assets/ic_team.png
     - assets/
