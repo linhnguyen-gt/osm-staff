@@ -40,7 +40,9 @@ class _SplashScreenState extends State<SplashScreen> {
                         fontSize: 50),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 10,),
+                  SizedBox(
+                    height: 10,
+                  ),
                   Text(
                     'FOR STAFF',
                     style: TextStyle(
